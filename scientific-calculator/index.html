@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>آلة حاسبة علمية رسومية</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; color: #e2e8f0;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    background: linear-gradient(160deg, #0f172a, #1e1b4b 55%, #0f172a);
+    display: flex; flex-direction: column; align-items: center; padding: 24px 12px 40px;
+  }
+  h1 { font-size: 1.6rem; margin: 4px 0 2px; }
+  .sub { color: #94a3b8; margin: 0 0 20px; font-size: .95rem; }
+  .wrap { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 1060px; }
+  .card {
+    background: rgba(15, 23, 42, .82); border: 1px solid #334155; border-radius: 18px;
+    padding: 18px; box-shadow: 0 12px 40px rgba(0,0,0,.45); backdrop-filter: blur(6px);
+  }
+  .calc { width: 380px; max-width: 100%; }
+  .display {
+    background: #020617; border: 1px solid #1e293b; border-radius: 12px;
+    padding: 14px 16px; margin-bottom: 14px; min-height: 92px;
+    display: flex; flex-direction: column; justify-content: center; gap: 6px;
+  }
+  #expr { width: 100%; background: transparent; border: 0; outline: 0; color: #f8fafc;
+    font-size: 1.45rem; text-align: left; direction: ltr; font-family: ui-monospace, monospace; }
+  #result { text-align: left; direction: ltr; color: #34d399; font-size: 1.2rem;
+    min-height: 1.5em; font-family: ui-monospace, monospace; word-break: break-all; }
+  #result.err { color: #f87171; }
+  .row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .mode { flex: 1; color: #cbd5e1; font-size: .9rem; }
+  .mode button, .mini {
+    background: #1e293b; color: #e2e8f0; border: 1px solid #475569; border-radius: 999px;
+    padding: 6px 14px; cursor: pointer; font-size: .9rem;
+  }
+  .mode button.active { background: #0d9488; border-color: #0d9488; color: #fff; }
+  .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .grid button {
+    padding: 13px 4px; font-size: 1.02rem; border-radius: 11px; cursor: pointer;
+    background: #1e293b; color: #e2e8f0; border: 1px solid #334155; transition: transform .05s, background .15s;
+  }
+  .grid button:hover { background: #334155; }
+  .grid button:active { transform: scale(.95); }
+  .grid button.num { background: #0f172a; font-size: 1.15rem; }
+  .grid button.op { background: #312e81; }
+  .grid button.eq { background: #0d9488; border-color: #0d9488; color: #fff; grid-column: span 2; }
+  .grid button.fn { background: #1c1917; font-size: .92rem; }
+  .graph { width: 620px; max-width: 100%; }
+  canvas { width: 100%; height: 340px; background: #020617; border: 1px solid #1e293b; border-radius: 12px; display: block; }
+  .fxrow { display: flex; gap: 8px; margin-top: 12px; }
+  #fx { flex: 1; background: #020617; border: 1px solid #334155; color: #f8fafc; border-radius: 10px;
+    padding: 11px 12px; font-size: 1.05rem; direction: ltr; text-align: left; font-family: ui-monospace, monospace; }
+  .plot { background: #7c3aed; border: 0; color: #fff; border-radius: 10px; padding: 11px 20px;
+    cursor: pointer; font-size: 1rem; }
+  .plot:hover { background: #6d28d9; }
+  .presets { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .presets button { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; border-radius: 999px;
+    padding: 6px 12px; cursor: pointer; direction: ltr; font-family: ui-monospace, monospace; }
+  #plotmsg { color: #f87171; min-height: 1.4em; margin-top: 8px; font-size: .9rem; }
+  .hint { color: #94a3b8; font-size: .85rem; margin-top: 6px; line-height: 1.7; }
+  .hist { margin-top: 14px; border-top: 1px solid #1e293b; padding-top: 10px; max-height: 170px; overflow-y: auto; }
+  .hist h3 { margin: 0 0 8px; font-size: .95rem; color: #94a3b8; }
+  .hist div { padding: 6px 8px; border-radius: 8px; cursor: pointer; direction: ltr; text-align: left;
+    font-family: ui-monospace, monospace; font-size: .92rem; color: #cbd5e1; }
+  .hist div:hover { background: #1e293b; }
+  .foot { color: #64748b; font-size: .85rem; margin-top: 22px; }
+</style>
+</head>
+<body>
+  <h1>آلة حاسبة علمية رسومية</h1>
+  <p class="sub">احسب وراسم الدوال — كل الحسابات تتم داخل متصفحك</p>
+  <div class="wrap">
+    <section class="card calc">
+      <div class="display">
+        <input id="expr" type="text" placeholder="0" autocomplete="off" spellcheck="false">
+        <div id="result"></div>
+      </div>
+      <div class="row">
+        <div class="mode">الزوايا:
+          <button id="degBtn" class="active" onclick="setAngle('deg')">درجات</button>
+          <button id="radBtn" onclick="setAngle('rad')">راديان</button>
+        </div>
+        <button class="mini" onclick="clearAll()">مسح الكل</button>
+      </div>
+      <div class="grid">
+        <button class="fn" onclick="ins('sin(')">sin</button>
+        <button class="fn" onclick="ins('cos(')">cos</button>
+        <button class="fn" onclick="ins('tan(')">tan</button>
+        <button class="fn" onclick="ins('asin(')">sin⁻¹</button>
+        <button class="fn" onclick="ins('acos(')">cos⁻¹</button>
+        <button class="fn" onclick="ins('atan(')">tan⁻¹</button>
+        <button class="fn" onclick="ins('ln(')">ln</button>
+        <button class="fn" onclick="ins('log(')">log</button>
+        <button class="fn" onclick="ins('sqrt(')">√</button>
+        <button class="fn" onclick="ins('abs(')">|x|</button>
+        <button onclick="ins('(')">(</button>
+        <button onclick="ins(')')">)</button>
+        <button class="fn" onclick="ins('pi')">π</button>
+        <button class="fn" onclick="ins('e')">e</button>
+        <button onclick="back()">⌫</button>
+        <button class="fn" onclick="ins('^2')">x²</button>
+        <button class="fn" onclick="ins('^')">xʸ</button>
+        <button class="fn" onclick="ins('!')">!</button>
+        <button class="fn" onclick="ins('%')">%</button>
+        <button class="op" onclick="ins('÷')">÷</button>
+        <button class="num" onclick="ins('7')">7</button>
+        <button class="num" onclick="ins('8')">8</button>
+        <button class="num" onclick="ins('9')">9</button>
+        <button class="op" onclick="ins('×')">×</button>
+        <button class="op" onclick="clearAll()">C</button>
+        <button class="num" onclick="ins('4')">4</button>
+        <button class="num" onclick="ins('5')">5</button>
+        <button class="num" onclick="ins('6')">6</button>
+        <button class="op" onclick="ins('−')">−</button>
+        <button class="fn" onclick="ins('1/')">1/x</button>
+        <button class="num" onclick="ins('1')">1</button>
+        <button class="num" onclick="ins('2')">2</button>
+        <button class="num" onclick="ins('3')">3</button>
+        <button class="op" onclick="ins('+')">+</button>
+        <button class="fn" onclick="negate()">±</button>
+        <button class="num" onclick="ins('0')">0</button>
+        <button class="num" onclick="ins('.')">.</button>
+        <button class="eq" onclick="calc()">=</button>
+      </div>
+      <div class="hist" id="histBox" style="display:none">
+        <h3>السجل</h3>
+        <div id="hist"></div>
+      </div>
+    </section>
+
+    <section class="card graph">
+      <h2 style="margin:0 0 12px;font-size:1.15rem">رسم الدوال f(x)</h2>
+      <canvas id="cv" width="1160" height="680"></canvas>
+      <div class="fxrow">
+        <input id="fx" type="text" value="sin(x)" autocomplete="off" spellcheck="false">
+        <button class="plot" onclick="plot()">ارسم</button>
+      </div>
+      <div class="presets">
+        <button onclick="setFx('sin(x)')">sin(x)</button>
+        <button onclick="setFx('x^2')">x²</button>
+        <button onclick="setFx('x^3 - 3*x')">x³ − 3x</button>
+        <button onclick="setFx('1/x')">1/x</button>
+        <button onclick="setFx('sqrt(x)')">√x</button>
+        <button onclick="setFx('e^(-x^2)')">e^(−x²)</button>
+      </div>
+      <div id="plotmsg"></div>
+      <p class="hint">اكتب الدالة باستخدام x والأرقام والدوال مثل sin و cos و ln و log و sqrt و abs، واستخدم ^ للأس. مثال: <span dir="ltr">sin(x) + x^2/10</span></p>
+    </section>
+  </div>
+  <p class="foot">تجربة نشر على Render — مستودع scientific-calculator</p>
+<script>
+"use strict";
+// ---------- Safe expression parser (no eval) ----------
+let angleMode = "deg";
+const FUNCTIONS = ["sin","cos","tan","asin","acos","atan","sinh","cosh","tanh","ln","log","sqrt","cbrt","abs"];
+const CONSTANTS = { pi: Math.PI, e: Math.E };
+
+function tokenize(s) {
+  const tokens = [];
+  let i = 0;
+  while (i < s.length) {
+    const ch = s[i];
+    if (/\s/.test(ch)) { i++; continue; }
+    if (/[0-9.]/.test(ch)) {
+      let j = i, dots = 0;
+      while (j < s.length && /[0-9.]/.test(s[j])) { if (s[j] === ".") dots++; j++; }
+      if (dots > 1) throw new Error("رقم غير صحيح");
+      tokens.push({ t: "num", v: parseFloat(s.slice(i, j)) });
+      i = j; continue;
+    }
+    if (/[a-zA-Z]/.test(ch)) {
+      let j = i;
+      while (j < s.length && /[a-zA-Z]/.test(s[j])) j++;
+      tokens.push({ t: "name", v: s.slice(i, j).toLowerCase() });
+      i = j; continue;
+    }
+    if ("+-*/%^!(),".includes(ch)) { tokens.push({ t: "op", v: ch }); i++; continue; }
+    throw new Error("رمز غير معروف: " + ch);
+  }
+  return tokens;
+}
+
+function factorial(n) {
+  if (n < 0 || !Number.isInteger(n) || n > 170) throw new Error("! لأعداد صحيحة بين 0 و 170");
+  let r = 1;
+  for (let k = 2; k <= n; k++) r *= k;
+  return r;
+}
+
+function applyFn(name, v) {
+  const toRad = d => angleMode === "deg" ? d * Math.PI / 180 : d;
+  const toDeg = r => angleMode === "deg" ? r * 180 / Math.PI : r;
+  switch (name) {
+    case "sin": return Math.sin(toRad(v));
+    case "cos": return Math.cos(toRad(v));
+    case "tan": return Math.tan(toRad(v));
+    case "asin": if (v < -1 || v > 1) throw new Error("asin خارج المجال"); return toDeg(Math.asin(v));
+    case "acos": if (v < -1 || v > 1) throw new Error("acos خارج المجال"); return toDeg(Math.acos(v));
+    case "atan": return toDeg(Math.atan(v));
+    case "sinh": return Math.sinh(v);
+    case "cosh": return Math.cosh(v);
+    case "tanh": return Math.tanh(v);
+    case "ln": if (v <= 0) throw new Error("ln لعدد موجب فقط"); return Math.log(v);
+    case "log": if (v <= 0) throw new Error("log لعدد موجب فقط"); return Math.log10(v);
+    case "sqrt": if (v < 0) throw new Error("جذر عدد سالب"); return Math.sqrt(v);
+    case "cbrt": return Math.cbrt(v);
+    case "abs": return Math.abs(v);
+    default: throw new Error("دالة غير معروفة: " + name);
+  }
+}
+
+// Recursive descent: expr -> term -> power -> unary -> postfix -> primary
+function parse(tokens, vars) {
+  let pos = 0;
+  const peek = () => tokens[pos];
+  const next = () => tokens[pos++];
+  function parseExpr() {
+    let v = parseTerm();
+    while (peek() && peek().t === "op" && (peek().v === "+" || peek().v === "-")) {
+      const op = next().v;
+      const r = parseTerm();
+      v = op === "+" ? v + r : v - r;
+    }
+    return v;
+  }
+  function parseTerm() {
+    let v = parsePower();
+    for (;;) {
+      const p = peek();
+      if (p && p.t === "op" && (p.v === "*" || p.v === "/")) {
+        next();
+        const r = parsePower();
+        if (p.v === "*") v *= r;
+        else { if (r === 0) throw new Error("قسمة على صفر"); v /= r; }
+      } else if (p && (p.t === "num" || p.t === "name" || (p.t === "op" && p.v === "("))) {
+        v *= parsePower(); // implicit multiplication: 2pi, 2(3), 2sin(x)
+      } else break;
+    }
+    return v;
+  }
+  function parsePower() {
+    let v = parseUnary();
+    if (peek() && peek().t === "op" && peek().v === "^") {
+      next();
+      const e = parsePower();
+      v = Math.pow(v, e);
+    }
+    return v;
+  }
+  function parseUnary() {
+    const p = peek();
+    if (p && p.t === "op" && (p.v === "-" || p.v === "+")) {
+      next();
+      const v = parseUnary();
+      return p.v === "-" ? -v : v;
+    }
+    return parsePostfix();
+  }
+  function parsePostfix() {
+    let v = parsePrimary();
+    for (;;) {
+      const p = peek();
+      if (p && p.t === "op" && p.v === "!") { next(); v = factorial(v); }
+      else if (p && p.t === "op" && p.v === "%") { next(); v = v / 100; }
+      else break;
+    }
+    return v;
+  }
+  function parsePrimary() {
+    const p = next();
+    if (!p) throw new Error("تعبير ناقص");
+    if (p.t === "num") return p.v;
+    if (p.t === "op" && p.v === "(") {
+      const v = parseExpr();
+      const c = next();
+      if (!c || c.v !== ")") throw new Error("قوس غير مغلق");
+      return v;
+    }
+    if (p.t === "name") {
+      if (p.v === "x") {
+        if (vars && typeof vars.x === "number") return vars.x;
+        throw new Error("x يستخدم في الرسم فقط");
+      }
+      if (p.v in CONSTANTS) return CONSTANTS[p.v];
+      if (FUNCTIONS.includes(p.v)) {
+        const o = next();
+        if (!o || o.v !== "(") throw new Error("الدالة تحتاج قوسين");
+        const v = parseExpr();
+        const c = next();
+        if (!c || c.v !== ")") throw new Error("قوس غير مغلق");
+        return applyFn(p.v, v);
+      }
+      throw new Error("اسم غير معروف: " + p.v);
+    }
+    throw new Error("تعبير غير صحيح");
+  }
+  const value = parseExpr();
+  if (pos < tokens.length) throw new Error("تعبير غير صحيح");
+  return value;
+}
+
+function normalize(s) {
+  return s.replace(/[×]/g, "*").replace(/[÷]/g, "/").replace(/[−]/g, "-").replace(/π/g, "pi");
+}
+function evaluate(expr, vars) {
+  const v = parse(tokenize(normalize(expr)), vars);
+  if (typeof v !== "number" || !isFinite(v)) throw new Error("نتيجة غير محددة");
+  return v;
+}
+function fmt(v) {
+  if (Object.is(v, -0)) v = 0;
+  const a = Math.abs(v);
+  if (a !== 0 && (a >= 1e12 || a < 1e-9)) return v.toExponential(6).replace(/\.?0+e/, "e");
+  return String(Math.round(v * 1e12) / 1e12);
+}
+
+// ---------- Calculator UI ----------
+const exprEl = document.getElementById("expr");
+const resultEl = document.getElementById("result");
+const histEl = document.getElementById("hist");
+const histBox = document.getElementById("histBox");
+
+function ins(s) {
+  exprEl.value += s;
+  exprEl.focus();
+  liveEval();
+}
+function back() { exprEl.value = exprEl.value.slice(0, -1); liveEval(); }
+function clearAll() { exprEl.value = ""; resultEl.textContent = ""; resultEl.classList.remove("err"); }
+function negate() {
+  const v = exprEl.value;
+  exprEl.value = v.startsWith("-") ? v.slice(1) : "-" + v;
+  liveEval();
+}
+function setAngle(m) {
+  angleMode = m;
+  document.getElementById("degBtn").classList.toggle("active", m === "deg");
+  document.getElementById("radBtn").classList.toggle("active", m === "rad");
+  liveEval();
+}
+function liveEval() {
+  const s = exprEl.value.trim();
+  resultEl.classList.remove("err");
+  if (!s) { resultEl.textContent = ""; return; }
+  try { resultEl.textContent = "= " + fmt(evaluate(s)); }
+  catch (e) { resultEl.textContent = ""; }
+}
+function calc() {
+  const s = exprEl.value.trim();
+  if (!s) return;
+  try {
+    const v = evaluate(s);
+    resultEl.classList.remove("err");
+    resultEl.textContent = "= " + fmt(v);
+    addHistory(s, fmt(v));
+    exprEl.value = fmt(v);
+  } catch (e) {
+    resultEl.classList.add("err");
+    resultEl.textContent = "خطأ: " + e.message;
+  }
+}
+function addHistory(expr, res) {
+  histBox.style.display = "block";
+  const d = document.createElement("div");
+  d.textContent = expr + " = " + res;
+  d.onclick = () => { exprEl.value = res; liveEval(); };
+  histEl.prepend(d);
+  while (histEl.children.length > 12) histEl.removeChild(histEl.lastChild);
+}
+exprEl.addEventListener("input", liveEval);
+exprEl.addEventListener("keydown", e => {
+  if (e.key === "Enter") { e.preventDefault(); calc(); }
+  if (e.key === "Escape") clearAll();
+});
+
+// ---------- Function plotter ----------
+const cv = document.getElementById("cv");
+const ctx = cv.getContext("2d");
+const plotmsg = document.getElementById("plotmsg");
+
+function setFx(v) { document.getElementById("fx").value = v; plot(); }
+
+function plot() {
+  const src = document.getElementById("fx").value.trim();
+  plotmsg.textContent = "";
+  const W = cv.width, H = cv.height;
+  const xMin = -10, xMax = 10;
+  let pts = [];
+  try {
+    for (let i = 0; i <= 600; i++) {
+      const x = xMin + (xMax - xMin) * i / 600;
+      let y;
+      try { y = evaluate(src, { x }); } catch (e) { y = NaN; }
+      pts.push([x, y]);
+    }
+    if (pts.every(p => !isFinite(p[1]))) throw new Error("الدالة لا تعطي قيماً صالحة في هذا المجال");
+  } catch (e) {
+    plotmsg.textContent = "خطأ في الدالة: " + e.message;
+    drawFrame(W, H, xMin, xMax, -10, 10);
+    return;
+  }
+  let ys = pts.map(p => p[1]).filter(isFinite);
+  let yMin = Math.min(...ys), yMax = Math.max(...ys);
+  if (yMax - yMin < 1e-6) { yMax += 1; yMin -= 1; }
+  const pad = (yMax - yMin) * 0.12;
+  yMin -= pad; yMax += pad;
+  if (yMin > 0) yMin = -1;
+  if (yMax < 0) yMax = 1;
+  drawFrame(W, H, xMin, xMax, yMin, yMax);
+  const X = x => (x - xMin) / (xMax - xMin) * W;
+  const Y = y => H - (y - yMin) / (yMax - yMin) * H;
+  ctx.strokeStyle = "#22d3ee";
+  ctx.lineWidth = 4;
+  ctx.lineJoin = "round";
+  ctx.beginPath();
+  let started = false;
+  let prevY = null;
+  for (const [x, y] of pts) {
+    if (!isFinite(y) || y < yMin - 50 || y > yMax + 50) { started = false; prevY = null; continue; }
+    if (prevY !== null && Math.abs(y - prevY) > (yMax - yMin) * 0.9) { started = false; }
+    if (!started) { ctx.moveTo(X(x), Y(y)); started = true; }
+    else ctx.lineTo(X(x), Y(y));
+    prevY = y;
+  }
+  ctx.stroke();
+}
+
+function drawFrame(W, H, xMin, xMax, yMin, yMax) {
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = "#020617";
+  ctx.fillRect(0, 0, W, H);
+  const X = x => (x - xMin) / (xMax - xMin) * W;
+  const Y = y => H - (y - yMin) / (yMax - yMin) * H;
+  ctx.strokeStyle = "#1e293b";
+  ctx.lineWidth = 1;
+  ctx.fillStyle = "#64748b";
+  ctx.font = "22px monospace";
+  for (let gx = Math.ceil(xMin); gx <= xMax; gx++) {
+    ctx.beginPath(); ctx.moveTo(X(gx), 0); ctx.lineTo(X(gx), H); ctx.stroke();
+    if (gx !== 0) ctx.fillText(String(gx), X(gx) + 6, Y(0) + 26);
+  }
+  for (let gy = Math.ceil(yMin); gy <= yMax; gy++) {
+    ctx.beginPath(); ctx.moveTo(0, Y(gy)); ctx.lineTo(W, Y(gy)); ctx.stroke();
+    if (gy !== 0) ctx.fillText(String(gy), X(0) + 8, Y(gy) - 8);
+  }
+  ctx.strokeStyle = "#475569";
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(X(0), 0); ctx.lineTo(X(0), H); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, Y(0)); ctx.lineTo(W, Y(0)); ctx.stroke();
+}
+
+plot();
+exprEl.focus();
+</script>
+</body>
+</html>
